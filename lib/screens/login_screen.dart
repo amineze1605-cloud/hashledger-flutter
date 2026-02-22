@@ -11,37 +11,59 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
   bool loading = false;
 
-  void handleAuth(bool isLogin) async {
-    setState(() => loading = true);
+  Future<void> handleAuth(bool isLogin) async {
+    if (loading) return;
 
-    Map<String, dynamic> data;
-    if (isLogin) {
-      data = await ApiService.login(
-          emailController.text.trim(),
-          passwordController.text.trim());
-    } else {
-      data = await ApiService.register(
-          emailController.text.trim(),
-          passwordController.text.trim());
-    }
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
 
-    setState(() => loading = false);
-
-    if (data.containsKey("error")) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(data['error'])));
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Email et mot de passe requis")),
+      );
       return;
     }
 
-    UserModel user = UserModel.fromJson(
-        data['user'], data['token']);
+    setState(() => loading = true);
+
+    Map<String, dynamic> data;
+
+    try {
+      if (isLogin) {
+        data = await ApiService.login(email, password);
+      } else {
+        data = await ApiService.register(email, password);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur réseau")),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => loading = false);
+
+    if (data.containsKey("error")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data["error"])),
+      );
+      return;
+    }
+
+    UserModel user =
+        UserModel.fromJson(data["user"], data["token"]);
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-          builder: (_) => HomeScreen(user: user)),
+        builder: (_) => HomeScreen(user: user),
+      ),
     );
   }
 
@@ -54,12 +76,14 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: [
             TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: "Email")),
+              controller: emailController,
+              decoration: InputDecoration(labelText: "Email"),
+            ),
             TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: "Mot de passe")),
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: "Mot de passe"),
+            ),
             SizedBox(height: 20),
 
             loading
@@ -67,13 +91,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 : Column(
                     children: [
                       ElevatedButton(
-                          onPressed: () => handleAuth(true),
-                          child: Text("Se connecter")),
+                        onPressed: () => handleAuth(true),
+                        child: Text("Se connecter"),
+                      ),
                       ElevatedButton(
-                          onPressed: () => handleAuth(false),
-                          child: Text("S’inscrire")),
+                        onPressed: () => handleAuth(false),
+                        child: Text("S’inscrire"),
+                      ),
                     ],
-                  )
+                  ),
           ],
         ),
       ),
