@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
@@ -7,16 +7,19 @@ import 'login_screen.dart';
 class HomeScreen extends StatefulWidget {
   final UserModel user;
 
-  HomeScreen({required this.user});
+  const HomeScreen({super.key, required this.user});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   late UserModel currentUser;
-  bool sessionActive = false;
-  int sessionTime = 30;
+
+  bool miningActive = false;
+  bool loadingMine = false;
+
+  int countdown = 30;
   Timer? _timer;
 
   @override
@@ -25,41 +28,75 @@ class _HomeScreenState extends State<HomeScreen> {
     currentUser = widget.user;
   }
 
-  void startSession() {
-    if (sessionActive) return;
+  void startMiningCountdown() {
+    if (miningActive || loadingMine) return;
+
     setState(() {
-      sessionActive = true;
-      sessionTime = 30;
+      miningActive = true;
+      countdown = 30;
     });
 
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() => sessionTime--);
-      if (sessionTime <= 0) {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+
+      setState(() {
+        countdown--;
+      });
+
+      if (countdown <= 0) {
         timer.cancel();
-        endSession();
+        sendMineRequest();
       }
     });
   }
 
-  void endSession() async {
-    setState(() => sessionActive = false);
-
-    int basePoints = 20;
-    int bonus = (DateTime.now().millisecondsSinceEpoch % 2 == 0) ? 20 : 0;
-
-    final result = await ApiService.addSession(
-        currentUser.token, basePoints, bonus);
+  Future<void> sendMineRequest() async {
+    if (loadingMine) return;
 
     setState(() {
-      currentUser = UserModel(
-          id: currentUser.id,
-          email: currentUser.email,
-          points: currentUser.points + result['totalPoints'],
-          token: currentUser.token);
+      loadingMine = true;
+      miningActive = false;
+    });
+
+    final result = await ApiService.mine(currentUser.token);
+
+    if (!mounted) return;
+
+    setState(() {
+      loadingMine = false;
+    });
+
+    if (result.containsKey("error")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result["error"])),
+      );
+      return;
+    }
+
+    final int newTotal = _parseInt(result["new_total"]);
+    final int reward = _parseInt(result["reward"]);
+
+    setState(() {
+      currentUser = currentUser.copyWith(points: newTotal);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Session +${result['totalPoints']} points")));
+      SnackBar(content: Text("Mining réussi : +$reward points")),
+    );
+  }
+
+  int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  void logout() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
   @override
@@ -72,33 +109,64 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Dashboard"),
+        title: const Text("Dashboard"),
         actions: [
           IconButton(
-              icon: Icon(Icons.logout),
-              onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => LoginScreen()),
-                  )),
+            icon: const Icon(Icons.logout),
+            onPressed: logout,
+          ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Text("Email : ${currentUser.email}",
-                style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text("Points : ${currentUser.points}",
-                style: TextStyle(fontSize: 24)),
-            SizedBox(height: 20),
-            sessionActive
-                ? Text("Session : $sessionTime s")
-                : ElevatedButton(
-                    onPressed: startSession,
-                    child: Text("Commencer Session"),
-                  ),
-          ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                "Email : ${currentUser.email}",
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Points : ${currentUser.points}",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                currentUser.isPremium ? "Compte premium" : "Compte standard",
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 30),
+              if (loadingMine)
+                const Center(child: CircularProgressIndicator())
+              else if (miningActive)
+                Column(
+                  children: [
+                    const Text(
+                      "Mining en cours...",
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "$countdown s",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                ElevatedButton(
+                  onPressed: startMiningCountdown,
+                  child: const Text("Lancer le mining"),
+                ),
+            ],
+          ),
         ),
       ),
     );
