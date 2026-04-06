@@ -4,8 +4,10 @@ import '../models/user_model.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -18,11 +20,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (loading) return;
 
     final email = emailController.text.trim();
-    final password = passwordController.text.trim();
+    final password = passwordController.text; // pas de trim sur le mot de passe
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Email et mot de passe requis")),
+        const SnackBar(content: Text("Email et mot de passe requis")),
       );
       return;
     }
@@ -39,14 +41,17 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+
       setState(() => loading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erreur réseau")),
+        const SnackBar(content: Text("Erreur réseau")),
       );
       return;
     }
 
     if (!mounted) return;
+
     setState(() => loading = false);
 
     if (data.containsKey("error")) {
@@ -56,8 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    UserModel user =
-        UserModel.fromJson(data["user"], data["token"]);
+    final user = UserModel.fromJson(data["user"], data["token"]);
 
     Navigator.pushReplacement(
       context,
@@ -68,39 +72,69 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("HashLedger Login")),
-      body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: "Email"),
-            ),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: "Mot de passe"),
-            ),
-            SizedBox(height: 20),
+      appBar: AppBar(
+        title: const Text("HashLedger Login"),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 20),
 
-            loading
-                ? CircularProgressIndicator()
-                : Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => handleAuth(true),
-                        child: Text("Se connecter"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => handleAuth(false),
-                        child: Text("S’inscrire"),
-                      ),
-                    ],
-                  ),
-          ],
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: "Email",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: "Mot de passe",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              if (loading)
+                const Center(child: CircularProgressIndicator())
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => handleAuth(true),
+                      child: const Text("Se connecter"),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => handleAuth(false),
+                      child: const Text("S’inscrire"),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
