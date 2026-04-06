@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
+import '../services/storage_service.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (loading) return;
 
     final email = emailController.text.trim();
-    final password = passwordController.text; // pas de trim sur le mot de passe
+    final password = passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -41,9 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-
       setState(() => loading = false);
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Erreur réseau")),
       );
@@ -62,6 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final user = UserModel.fromJson(data["user"], data["token"]);
+
+    await StorageService.saveToken(user.token);
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
@@ -91,7 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -101,9 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 16),
-
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -113,9 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 24),
-
               if (loading)
                 const Center(child: CircularProgressIndicator())
               else
