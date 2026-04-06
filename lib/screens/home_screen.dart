@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool miningActive = false;
   bool loadingMine = false;
+  bool refreshingUser = false;
 
   int countdown = 30;
   Timer? _timer;
@@ -26,6 +28,31 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     currentUser = widget.user;
+    refreshUser();
+  }
+
+  Future<void> refreshUser() async {
+    if (refreshingUser) return;
+
+    setState(() {
+      refreshingUser = true;
+    });
+
+    final result = await ApiService.getUser(currentUser.token);
+
+    if (!mounted) return;
+
+    setState(() {
+      refreshingUser = false;
+    });
+
+    if (result.containsKey("error")) {
+      return;
+    }
+
+    setState(() {
+      currentUser = UserModel.fromJson(result, currentUser.token);
+    });
   }
 
   void startMiningCountdown() {
@@ -92,7 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return 0;
   }
 
-  void logout() {
+  Future<void> logout() async {
+    _timer?.cancel();
+    await StorageService.clearToken();
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -111,6 +143,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text("Dashboard"),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: refreshUser,
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: logout,
@@ -141,6 +177,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 30),
+              if (refreshingUser)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 20),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
               if (loadingMine)
                 const Center(child: CircularProgressIndicator())
               else if (miningActive)
