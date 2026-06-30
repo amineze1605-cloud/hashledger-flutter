@@ -18,7 +18,9 @@ class HashLedgerApp extends StatelessWidget {
       title: 'HashLedger',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+        brightness: Brightness.light,
       ),
       home: const AppStartupScreen(),
     );
@@ -35,6 +37,7 @@ class AppStartupScreen extends StatefulWidget {
 class _AppStartupScreenState extends State<AppStartupScreen> {
   bool loading = true;
   UserModel? user;
+  String? startupError;
 
   @override
   void initState() {
@@ -45,10 +48,12 @@ class _AppStartupScreenState extends State<AppStartupScreen> {
   Future<void> checkSession() async {
     final token = await StorageService.getToken();
 
+    if (!mounted) return;
+
     if (token == null || token.isEmpty) {
-      if (!mounted) return;
       setState(() {
         loading = false;
+        user = null;
       });
       return;
     }
@@ -59,8 +64,13 @@ class _AppStartupScreenState extends State<AppStartupScreen> {
 
     if (result.containsKey("error")) {
       await StorageService.clearToken();
+
+      if (!mounted) return;
+
       setState(() {
         loading = false;
+        user = null;
+        startupError = result["error"]?.toString();
       });
       return;
     }
@@ -68,6 +78,7 @@ class _AppStartupScreenState extends State<AppStartupScreen> {
     setState(() {
       user = UserModel.fromJson(result, token);
       loading = false;
+      startupError = null;
     });
   }
 
@@ -85,6 +96,8 @@ class _AppStartupScreenState extends State<AppStartupScreen> {
       return HomeScreen(user: user!);
     }
 
-    return const LoginScreen();
+    return LoginScreen(
+      startupError: startupError,
+    );
   }
 }
