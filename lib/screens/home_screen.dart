@@ -22,6 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool refreshingUser = false;
 
   int countdown = 30;
+  int cooldownSeconds = 30;
+  int dailyUsed = 0;
+  int dailyLimit = 200;
+
   Timer? _timer;
 
   @override
@@ -47,11 +51,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     if (result.containsKey("error")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result["error"].toString())),
+      );
       return;
     }
 
     setState(() {
       currentUser = UserModel.fromJson(result, currentUser.token);
+      dailyUsed = _parseInt(result["sessions_today"]);
     });
   }
 
@@ -60,10 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       miningActive = true;
-      countdown = 30;
+      countdown = cooldownSeconds;
     });
 
     _timer?.cancel();
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
 
@@ -95,9 +104,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     if (result.containsKey("error")) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result["error"])),
-      );
+      final secondsRemaining = _parseInt(result["seconds_remaining"]);
+
+      if (secondsRemaining > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Cooldown actif : attends encore $secondsRemaining secondes"),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result["error"].toString())),
+        );
+      }
+
       return;
     }
 
@@ -106,6 +126,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       currentUser = currentUser.copyWith(points: newTotal);
+      dailyUsed = _parseInt(result["daily_used"]);
+      dailyLimit = _parseInt(result["daily_limit"]);
+      cooldownSeconds = _parseInt(result["cooldown_seconds"]);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -115,12 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _parseInt(dynamic value) {
     if (value is int) return value;
+    if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? 0;
     return 0;
   }
 
   Future<void> logout() async {
     _timer?.cancel();
+
     await StorageService.clearToken();
 
     if (!mounted) return;
@@ -137,15 +162,95 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Widget _buildInfoCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              "Email : ${currentUser.email}",
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Points : ${currentUser.points}",
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              currentUser.isPremium ? "Compte premium" : "Compte standard",
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Sessions aujourd’hui : $dailyUsed / $dailyLimit",
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiningSection() {
+    if (refreshingUser || loadingMine) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (miningActive) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Text(
+                "Mining en cours...",
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "$countdown s",
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "La récompense sera envoyée à la fin du timer.",
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ElevatedButton(
+      onPressed: startMiningCountdown,
+      child: const Text("Lancer le mining"),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Dashboard"),
+        title: const Text("HashLedger"),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: refreshUser,
+            onPressed: refreshingUser ? null : refreshUser,
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -154,59 +259,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                "Email : ${currentUser.email}",
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "Points : ${currentUser.points}",
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+        child: RefreshIndicator(
+          onRefresh: refreshUser,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildInfoCard(),
+                const SizedBox(height: 24),
+                _buildMiningSection(),
+                const SizedBox(height: 24),
+                const Text(
+                  "Backend connecté : Vercel + Neon",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                currentUser.isPremium ? "Compte premium" : "Compte standard",
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 30),
-              if (refreshingUser)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 20),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              if (loadingMine)
-                const Center(child: CircularProgressIndicator())
-              else if (miningActive)
-                Column(
-                  children: [
-                    const Text(
-                      "Mining en cours...",
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "$countdown s",
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                ElevatedButton(
-                  onPressed: startMiningCountdown,
-                  child: const Text("Lancer le mining"),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
