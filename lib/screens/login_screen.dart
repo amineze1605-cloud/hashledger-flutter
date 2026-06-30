@@ -20,12 +20,30 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> handleAuth(bool isLogin) async {
     if (loading) return;
 
-    final email = emailController.text.trim();
+    FocusScope.of(context).unfocus();
+
+    final email = emailController.text.trim().toLowerCase();
     final password = passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Email et mot de passe requis")),
+      );
+      return;
+    }
+
+    if (!email.contains("@")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Email invalide")),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Le mot de passe doit contenir au moins 6 caractères"),
+        ),
       );
       return;
     }
@@ -42,7 +60,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+
       setState(() => loading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Erreur réseau")),
       );
@@ -55,12 +75,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (data.containsKey("error")) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data["error"])),
+        SnackBar(content: Text(data["error"].toString())),
       );
       return;
     }
 
-    final user = UserModel.fromJson(data["user"], data["token"]);
+    if (!data.containsKey("token") || !data.containsKey("user")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Réponse serveur invalide")),
+      );
+      return;
+    }
+
+    final token = data["token"];
+    final userData = data["user"];
+
+    if (token == null || userData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Token ou utilisateur manquant")),
+      );
+      return;
+    }
+
+    final user = UserModel.fromJson(userData, token.toString());
 
     await StorageService.saveToken(user.token);
 
@@ -94,26 +131,52 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
+
+              const Text(
+                "Bienvenue sur HashLedger",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              const Text(
+                "Connecte-toi ou crée un compte pour commencer à miner des points.",
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 32),
+
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: "Email",
                   border: OutlineInputBorder(),
                 ),
               ),
+
               const SizedBox(height: 16),
+
               TextField(
                 controller: passwordController,
                 obscureText: true,
                 autocorrect: false,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: "Mot de passe",
                   border: OutlineInputBorder(),
                 ),
+                onSubmitted: (_) => handleAuth(true),
               ),
+
               const SizedBox(height: 24),
+
               if (loading)
                 const Center(child: CircularProgressIndicator())
               else
@@ -125,9 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text("Se connecter"),
                     ),
                     const SizedBox(height: 12),
-                    ElevatedButton(
+                    OutlinedButton(
                       onPressed: () => handleAuth(false),
-                      child: const Text("S’inscrire"),
+                      child: const Text("Créer un compte"),
                     ),
                   ],
                 ),
