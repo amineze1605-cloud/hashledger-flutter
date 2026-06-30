@@ -14,23 +14,28 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json, String token) {
-    final dynamic rawPoints = json['points'];
-
-    int parsedPoints = 0;
-
-    if (rawPoints is int) {
-      parsedPoints = rawPoints;
-    } else if (rawPoints is String) {
-      parsedPoints = int.tryParse(rawPoints) ?? 0;
-    }
-
     return UserModel(
       id: json['id']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
-      points: parsedPoints,
+      points: _parseInt(json['points']),
       token: token,
-      isPremium: json['is_premium'] == true,
+      isPremium: _parseBool(json['is_premium']),
     );
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) {
+      return value.toLowerCase() == 'true';
+    }
+    return false;
   }
 
   UserModel copyWith({
