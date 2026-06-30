@@ -5,7 +5,12 @@ import '../services/storage_service.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? startupError;
+
+  const LoginScreen({
+    super.key,
+    this.startupError,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -16,6 +21,33 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   bool loading = false;
+  bool startupErrorShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showStartupErrorIfNeeded();
+    });
+  }
+
+  void showStartupErrorIfNeeded() {
+    if (!mounted) return;
+    if (startupErrorShown) return;
+
+    final error = widget.startupError;
+
+    if (error == null || error.isEmpty) return;
+
+    startupErrorShown = true;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error),
+      ),
+    );
+  }
 
   Future<void> handleAuth(bool isLogin) async {
     if (loading) return;
@@ -48,7 +80,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() => loading = true);
+    setState(() {
+      loading = true;
+    });
 
     Map<String, dynamic> data;
 
@@ -61,7 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      setState(() => loading = false);
+      setState(() {
+        loading = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Erreur réseau")),
@@ -71,7 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    setState(() => loading = false);
+    setState(() {
+      loading = false;
+    });
 
     if (data.containsKey("error")) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -90,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final token = data["token"];
     final userData = data["user"];
 
-    if (token == null || userData == null) {
+    if (token == null || userData == null || userData is! Map<String, dynamic>) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Token ou utilisateur manquant")),
       );
@@ -178,7 +216,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 24),
 
               if (loading)
-                const Center(child: CircularProgressIndicator())
+                const Center(
+                  child: CircularProgressIndicator(),
+                )
               else
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
