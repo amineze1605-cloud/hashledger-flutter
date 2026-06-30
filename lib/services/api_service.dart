@@ -2,22 +2,32 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'https://hashledger-backend.onrender.com';
+  static const String baseUrl = 'https://hashledger-backend.vercel.app';
 
   static Future<Map<String, dynamic>> _handleResponse(http.Response res) async {
     try {
-      final data = jsonDecode(res.body);
+      final decoded = jsonDecode(res.body);
 
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        return Map<String, dynamic>.from(data);
-      } else {
+      if (decoded is Map<String, dynamic>) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          return decoded;
+        }
+
         return {
-          "error": data["error"] ?? "Erreur serveur (${res.statusCode})"
+          ...decoded,
+          "statusCode": res.statusCode,
+          "error": decoded["error"] ?? "Erreur serveur (${res.statusCode})",
         };
       }
+
+      return {
+        "statusCode": res.statusCode,
+        "error": "Réponse serveur invalide",
+      };
     } catch (e) {
       return {
-        "error": "Erreur réseau ou réponse invalide"
+        "statusCode": res.statusCode,
+        "error": "Erreur réseau ou réponse invalide",
       };
     }
   }
@@ -33,14 +43,16 @@ class ApiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'email': email.trim(),
+          'email': email.trim().toLowerCase(),
           'password': password,
         }),
       );
 
       return _handleResponse(res);
     } catch (e) {
-      return {"error": "Impossible de contacter le serveur"};
+      return {
+        "error": "Impossible de contacter le serveur",
+      };
     }
   }
 
@@ -55,14 +67,16 @@ class ApiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'email': email.trim(),
+          'email': email.trim().toLowerCase(),
           'password': password,
         }),
       );
 
       return _handleResponse(res);
     } catch (e) {
-      return {"error": "Impossible de contacter le serveur"};
+      return {
+        "error": "Impossible de contacter le serveur",
+      };
     }
   }
 
@@ -77,7 +91,9 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {"error": "Impossible de contacter le serveur"};
+      return {
+        "error": "Impossible de contacter le serveur",
+      };
     }
   }
 
@@ -93,7 +109,9 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {"error": "Impossible de contacter le serveur"};
+      return {
+        "error": "Impossible de contacter le serveur",
+      };
     }
   }
 }
