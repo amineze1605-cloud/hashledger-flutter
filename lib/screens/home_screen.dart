@@ -20,11 +20,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool miningActive = false;
   bool loadingMine = false;
   bool refreshingUser = false;
+  bool loadingHistory = false;
 
   int countdown = 30;
   int cooldownSeconds = 30;
   int dailyUsed = 0;
   int dailyLimit = 200;
+  int todayHistoryCount = 0;
+  int todayHistoryPoints = 0;
+
+  List<Map<String, dynamic>> miningHistory = [];
 
   Timer? _timer;
 
@@ -32,7 +37,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     currentUser = widget.user;
-    refreshUser();
+    refreshAll();
+  }
+
+  Future<void> refreshAll() async {
+    await refreshUser();
+    await refreshMiningHistory();
   }
 
   Future<void> refreshUser() async {
@@ -60,6 +70,42 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       currentUser = UserModel.fromJson(result, currentUser.token);
       dailyUsed = _parseInt(result["sessions_today"]);
+    });
+  }
+
+  Future<void> refreshMiningHistory() async {
+    if (loadingHistory) return;
+
+    setState(() {
+      loadingHistory = true;
+    });
+
+    final result = await ApiService.getMiningHistory(currentUser.token);
+
+    if (!mounted) return;
+
+    setState(() {
+      loadingHistory = false;
+    });
+
+    if (result.containsKey("error")) {
+      return;
+    }
+
+    final rawHistory = result["history"];
+
+    setState(() {
+      todayHistoryCount = _parseInt(result["today_count"]);
+      todayHistoryPoints = _parseInt(result["today_points"]);
+
+      if (rawHistory is List) {
+        miningHistory = rawHistory
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      } else {
+        miningHistory = [];
+      }
     });
   }
 
@@ -109,7 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (secondsRemaining > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Cooldown actif : attends encore $secondsRemaining secondes"),
+            content: Text(
+              "Cooldown actif : attends encore $secondsRemaining secondes",
+            ),
           ),
         );
       } else {
@@ -131,6 +179,10 @@ class _HomeScreenState extends State<HomeScreen> {
       cooldownSeconds = _parseInt(result["cooldown_seconds"]);
     });
 
+    await refreshMiningHistory();
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Mining réussi : +$reward points")),
     );
@@ -141,6 +193,23 @@ class _HomeScreenState extends State<HomeScreen> {
     if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? 0;
     return 0;
+  }
+
+  String _formatDate(dynamic value) {
+    if (value == null) return "";
+
+    try {
+      final date = DateTime.parse(value.toString()).toLocal();
+
+      final day = date.day.toString().padLeft(2, "0");
+      final month = date.month.toString().padLeft(2, "0");
+      final hour = date.hour.toString().padLeft(2, "0");
+      final minute = date.minute.toString().padLeft(2, "0");
+
+      return "$day/$month à $hour:$minute";
+    } catch (e) {
+      return value.toString();
+    }
   }
 
   Future<void> logout() async {
@@ -190,6 +259,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               "Sessions aujourd’hui : $dailyUsed / $dailyLimit",
               style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Historique aujourd’hui : $todayHistoryCount sessions / +$todayHistoryPoints points",
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),
@@ -242,6 +316,65 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildHistorySection() {
+    final lastItems = miningHistory.take(5).toList();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    "Dernières sessions",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (loadingHistory)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: refreshMiningHistory,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (lastItems.isEmpty)
+              const Text(
+                "Aucune session de minage pour le moment.",
+                textAlign: TextAlign.center,
+              )
+            else
+              Column(
+                children: lastItems.map((item) {
+                  final reward = _parseInt(item["reward"]);
+                  final createdAt = _formatDate(item["created_at"]);
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.bolt),
+                    title: Text("+$reward points"),
+                    subtitle: Text(createdAt),
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: refreshingUser ? null : refreshUser,
+            onPressed: refreshingUser ? null : refreshAll,
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -260,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: refreshUser,
+          onRefresh: refreshAll,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(20),
@@ -270,6 +403,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildInfoCard(),
                 const SizedBox(height: 24),
                 _buildMiningSection(),
+                const SizedBox(height: 24),
+                _buildHistorySection(),
                 const SizedBox(height: 24),
                 const Text(
                   "Backend connecté : Vercel + Neon",
