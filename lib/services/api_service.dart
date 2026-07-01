@@ -114,4 +114,21 @@ class ApiService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> getMiningHistory(String token) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/mining-history'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      return _handleResponse(res);
+    } catch (e) {
+      return {
+        "error": "Impossible de contacter le serveur",
+      };
+    }
+  }
 }
