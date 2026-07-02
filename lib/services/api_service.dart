@@ -6,27 +6,17 @@ class ApiService {
 
   static Future<Map<String, dynamic>> _handleResponse(http.Response res) async {
     try {
-      final decoded = jsonDecode(res.body);
+      final data = jsonDecode(res.body);
 
-      if (decoded is Map<String, dynamic>) {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          return decoded;
-        }
-
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      } else {
         return {
-          ...decoded,
-          "statusCode": res.statusCode,
-          "error": decoded["error"] ?? "Erreur serveur (${res.statusCode})",
+          "error": data["error"] ?? "Erreur serveur (${res.statusCode})",
         };
       }
-
-      return {
-        "statusCode": res.statusCode,
-        "error": "Réponse serveur invalide",
-      };
     } catch (e) {
       return {
-        "statusCode": res.statusCode,
         "error": "Erreur réseau ou réponse invalide",
       };
     }
@@ -50,9 +40,7 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {
-        "error": "Impossible de contacter le serveur",
-      };
+      return {"error": "Impossible de contacter le serveur"};
     }
   }
 
@@ -74,9 +62,7 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {
-        "error": "Impossible de contacter le serveur",
-      };
+      return {"error": "Impossible de contacter le serveur"};
     }
   }
 
@@ -91,9 +77,7 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {
-        "error": "Impossible de contacter le serveur",
-      };
+      return {"error": "Impossible de contacter le serveur"};
     }
   }
 
@@ -109,9 +93,7 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {
-        "error": "Impossible de contacter le serveur",
-      };
+      return {"error": "Impossible de contacter le serveur"};
     }
   }
 
@@ -126,9 +108,7 @@ class ApiService {
 
       return _handleResponse(res);
     } catch (e) {
-      return {
-        "error": "Impossible de contacter le serveur",
-      };
+      return {"error": "Impossible de contacter le serveur"};
     }
   }
 }
