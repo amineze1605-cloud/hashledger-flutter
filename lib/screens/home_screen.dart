@@ -169,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _parseInt(dynamic value) {
     if (value is int) return value;
+    if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? 0;
     return 0;
   }
@@ -193,7 +194,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: isError ? const Color(0xFF991B1B) : const Color(0xFF166534),
+        backgroundColor:
+            isError ? const Color(0xFF991B1B) : const Color(0xFF166534),
         content: Text(
           message,
           style: const TextStyle(color: Colors.white),
@@ -224,8 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             gradient: const LinearGradient(
@@ -235,9 +237,10 @@ class _HomeScreenState extends State<HomeScreen> {
           child: const Icon(
             Icons.auto_graph_rounded,
             color: Colors.white,
+            size: 22,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 "HashLedger",
                 style: TextStyle(
                   color: textMain,
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -255,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 "Sessions, points et progression",
                 style: TextStyle(
                   color: textMuted,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -274,26 +277,27 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _roundIconButton(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(15),
       child: Container(
-        width: 42,
-        height: 42,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
           color: card,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: border),
         ),
         child: Icon(
           icon,
           color: textMain,
-          size: 21,
+          size: 20,
         ),
       ),
     );
   }
 
   Widget _balanceCard() {
-    final progress = dailyLimit <= 0 ? 0.0 : (sessionsToday / dailyLimit).clamp(0.0, 1.0);
+    final progress =
+        dailyLimit <= 0 ? 0.0 : (sessionsToday / dailyLimit).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -311,9 +315,9 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: const Color(0xFF315477)),
         boxShadow: [
           BoxShadow(
-            color: blue.withOpacity(0.22),
-            blurRadius: 30,
-            offset: const Offset(0, 18),
+            color: blue.withOpacity(0.20),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
@@ -322,29 +326,33 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_circle_rounded, color: Colors.white70, size: 20),
+              const Icon(
+                Icons.account_circle_rounded,
+                color: Colors.white70,
+                size: 19,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   currentUser.email,
                   style: const TextStyle(
                     color: Colors.white70,
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           const Text(
             "Solde actuel",
             style: TextStyle(
               color: Colors.white70,
-              fontSize: 14,
+              fontSize: 13,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -359,21 +367,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 8),
               const Padding(
-                padding: EdgeInsets.only(bottom: 7),
+                padding: EdgeInsets.only(bottom: 5),
                 child: Text(
                   "points",
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.08),
               borderRadius: BorderRadius.circular(999),
@@ -383,23 +391,25 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  currentUser.isPremium ? Icons.workspace_premium_rounded : Icons.shield_rounded,
+                  currentUser.isPremium
+                      ? Icons.workspace_premium_rounded
+                      : Icons.shield_rounded,
                   color: currentUser.isPremium ? const Color(0xFFFACC15) : green,
-                  size: 18,
+                  size: 17,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 7),
                 Text(
                   currentUser.isPremium ? "Compte premium" : "Compte standard",
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -407,25 +417,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 "Progression du jour",
                 style: TextStyle(
                   color: Colors.white70,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
               Text(
                 "$sessionsToday / $dailyLimit",
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 9,
+              minHeight: 8,
               backgroundColor: Colors.white.withOpacity(0.14),
               valueColor: const AlwaysStoppedAnimation<Color>(cyan),
             ),
@@ -439,11 +449,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (loadingMine) {
       return _darkCard(
         child: const Padding(
-          padding: EdgeInsets.all(22),
+          padding: EdgeInsets.all(18),
           child: Column(
             children: [
               CircularProgressIndicator(color: cyan),
-              SizedBox(height: 14),
+              SizedBox(height: 12),
               Text(
                 "Validation de la session...",
                 style: TextStyle(color: textMuted),
@@ -457,34 +467,34 @@ class _HomeScreenState extends State<HomeScreen> {
     if (miningActive) {
       return _darkCard(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(18),
           child: Column(
             children: [
               const Text(
                 "Session active",
                 style: TextStyle(
                   color: textMain,
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               const Text(
                 "La récompense sera ajoutée à la fin du timer.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: textMuted),
+                style: TextStyle(color: textMuted, fontSize: 13),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
               Container(
-                width: 112,
-                height: 112,
+                width: 98,
+                height: 98,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: cyan, width: 4),
                   boxShadow: [
                     BoxShadow(
-                      color: cyan.withOpacity(0.25),
-                      blurRadius: 24,
+                      color: cyan.withOpacity(0.22),
+                      blurRadius: 22,
                     ),
                   ],
                 ),
@@ -493,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     "$countdown s",
                     style: const TextStyle(
                       color: textMain,
-                      fontSize: 26,
+                      fontSize: 24,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -507,32 +517,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return InkWell(
       onTap: startMiningCountdown,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
         height: 58,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           gradient: const LinearGradient(
             colors: [blue, cyan],
           ),
           boxShadow: [
             BoxShadow(
-              color: blue.withOpacity(0.30),
-              blurRadius: 22,
-              offset: const Offset(0, 12),
+              color: blue.withOpacity(0.28),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bolt_rounded, color: Colors.white, size: 26),
+            Icon(Icons.bolt_rounded, color: Colors.white, size: 25),
             SizedBox(width: 8),
             Text(
               "Lancer une session",
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -554,17 +564,17 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Historique récent",
               subtitle: "Tes dernières sessions validées",
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             if (loadingHistory)
               const Center(
                 child: Padding(
-                  padding: EdgeInsets.all(18),
+                  padding: EdgeInsets.all(16),
                   child: CircularProgressIndicator(color: cyan),
                 ),
               )
             else if (miningHistory.isEmpty)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
+                padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   "Aucune session enregistrée pour le moment.",
                   style: TextStyle(color: textMuted),
@@ -577,28 +587,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   final createdAt = _formatDate(item["created_at"]);
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: cardSoft,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: border),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 42,
-                          height: 42,
+                          width: 38,
+                          height: 38,
                           decoration: BoxDecoration(
                             color: green.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(13),
                           ),
                           child: const Icon(
                             Icons.bolt_rounded,
                             color: green,
+                            size: 21,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,16 +618,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 "+$reward points",
                                 style: const TextStyle(
                                   color: textMain,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 3),
+                              const SizedBox(height: 2),
                               Text(
                                 createdAt,
                                 style: const TextStyle(
                                   color: textMuted,
-                                  fontSize: 13,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -625,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const Icon(
                           Icons.check_circle_rounded,
                           color: green,
-                          size: 20,
+                          size: 19,
                         ),
                       ],
                     ),
@@ -641,7 +652,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _rewardsPreview() {
     return _darkCard(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -650,24 +661,24 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Récompenses",
               subtitle: "Préparation du futur système de retrait",
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFF1F2937),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: border),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.lock_clock_rounded, color: textMuted),
-                  SizedBox(width: 12),
+                  Icon(Icons.lock_clock_rounded, color: textMuted, size: 21),
+                  SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       "Les demandes de retrait seront ajoutées dans une prochaine étape.",
                       style: TextStyle(
                         color: textMuted,
-                        fontSize: 13,
+                        fontSize: 12,
                         height: 1.35,
                       ),
                     ),
@@ -689,16 +700,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: blue.withOpacity(0.14),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(13),
             border: Border.all(color: blue.withOpacity(0.25)),
           ),
-          child: Icon(icon, color: cyan),
+          child: Icon(icon, color: cyan, size: 21),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -707,16 +718,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 title,
                 style: const TextStyle(
                   color: textMain,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               Text(
                 subtitle,
                 style: const TextStyle(
                   color: textMuted,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ],
@@ -734,9 +745,9 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 18,
-            offset: const Offset(0, 12),
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -747,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _backendStatus() {
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
           color: green.withOpacity(0.10),
           borderRadius: BorderRadius.circular(999),
@@ -756,13 +767,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_done_rounded, color: green, size: 18),
-            SizedBox(width: 8),
+            Icon(Icons.cloud_done_rounded, color: green, size: 17),
+            SizedBox(width: 7),
             Text(
               "Backend connecté : Vercel + Neon",
               style: TextStyle(
                 color: textMain,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -793,20 +804,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 _pageTitle(),
                 const SizedBox(height: 18),
                 _balanceCard(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 if (refreshingUser)
                   const Padding(
-                    padding: EdgeInsets.only(bottom: 18),
+                    padding: EdgeInsets.only(bottom: 16),
                     child: Center(
                       child: CircularProgressIndicator(color: cyan),
                     ),
                   ),
                 _miningSection(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 _historyCard(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 _rewardsPreview(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 _backendStatus(),
               ],
             ),
