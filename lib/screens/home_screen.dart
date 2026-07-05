@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int countdown = 30;
   int sessionsToday = 0;
   int dailyLimit = 200;
+  int selectedIndex = 0;
 
   List<Map<String, dynamic>> miningHistory = [];
 
@@ -37,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const Color blue = Color(0xFF3B82F6);
   static const Color cyan = Color(0xFF22D3EE);
   static const Color green = Color(0xFF22C55E);
+  static const Color orange = Color(0xFFF97316);
   static const Color textMain = Color(0xFFF8FAFC);
   static const Color textMuted = Color(0xFF94A3B8);
 
@@ -222,6 +224,49 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Widget _selectedPage() {
+    switch (selectedIndex) {
+      case 1:
+        return _historyPage();
+      case 2:
+        return _withdrawPage();
+      case 3:
+        return _profilePage();
+      default:
+        return _homePage();
+    }
+  }
+
+  Widget _homePage() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _pageTitle(),
+          const SizedBox(height: 18),
+          _balanceCard(),
+          const SizedBox(height: 18),
+          if (refreshingUser)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Center(
+                child: CircularProgressIndicator(color: cyan),
+              ),
+            ),
+          _miningSection(),
+          const SizedBox(height: 18),
+          _historyCard(),
+          const SizedBox(height: 18),
+          _rewardsPreview(),
+          const SizedBox(height: 18),
+          _backendStatus(),
+        ],
+      ),
+    );
+  }
+
   Widget _pageTitle() {
     return Row(
       children: [
@@ -296,8 +341,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _balanceCard() {
-    final progress =
-        dailyLimit <= 0 ? 0.0 : (sessionsToday / dailyLimit).clamp(0.0, 1.0);
+    final double progress = dailyLimit <= 0
+        ? 0.0
+        : (sessionsToday / dailyLimit).clamp(0.0, 1.0).toDouble();
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -565,87 +611,138 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: "Tes dernières sessions validées",
             ),
             const SizedBox(height: 12),
-            if (loadingHistory)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(color: cyan),
+            _historyList(maxItems: 5),
+            if (miningHistory.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  setState(() {
+                    selectedIndex = 1;
+                  });
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 11,
+                  ),
+                  decoration: BoxDecoration(
+                    color: blue.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: blue.withOpacity(0.20)),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Voir tout l’historique",
+                        style: TextStyle(
+                          color: cyan,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: cyan,
+                        size: 17,
+                      ),
+                    ],
+                  ),
                 ),
-              )
-            else if (miningHistory.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "Aucune session enregistrée pour le moment.",
-                  style: TextStyle(color: textMuted),
-                ),
-              )
-            else
-              Column(
-                children: miningHistory.take(5).map((item) {
-                  final reward = _parseInt(item["reward"]);
-                  final createdAt = _formatDate(item["created_at"]);
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardSoft,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: border),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: green.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          child: const Icon(
-                            Icons.bolt_rounded,
-                            color: green,
-                            size: 21,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "+$reward points",
-                                style: const TextStyle(
-                                  color: textMain,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                createdAt,
-                                style: const TextStyle(
-                                  color: textMuted,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          color: green,
-                          size: 19,
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
               ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _historyList({int? maxItems}) {
+    if (loadingHistory) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(color: cyan),
+        ),
+      );
+    }
+
+    if (miningHistory.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          "Aucune session enregistrée pour le moment.",
+          style: TextStyle(color: textMuted),
+        ),
+      );
+    }
+
+    final items =
+        maxItems == null ? miningHistory : miningHistory.take(maxItems).toList();
+
+    return Column(
+      children: items.map((item) {
+        final reward = _parseInt(item["reward"]);
+        final createdAt = _formatDate(item["created_at"]);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: cardSoft,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: green.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  color: green,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "+$reward points",
+                      style: const TextStyle(
+                        color: textMain,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      createdAt,
+                      style: const TextStyle(
+                        color: textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: green,
+                size: 19,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -689,6 +786,366 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _historyPage() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _simpleHeader(
+            icon: Icons.history_rounded,
+            title: "Historique",
+            subtitle: "Toutes tes dernières sessions validées",
+          ),
+          const SizedBox(height: 18),
+          _darkCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _sectionHeader(
+                    icon: Icons.bolt_rounded,
+                    title: "Sessions",
+                    subtitle: "Points ajoutés à ton compte",
+                  ),
+                  const SizedBox(height: 12),
+                  _historyList(),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          _backendStatus(),
+        ],
+      ),
+    );
+  }
+
+  Widget _withdrawPage() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _simpleHeader(
+            icon: Icons.account_balance_wallet_rounded,
+            title: "Retrait",
+            subtitle: "Préparation du système de récompenses",
+          ),
+          const SizedBox(height: 18),
+          _darkCard(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.lock_clock_rounded,
+                    color: orange,
+                    size: 42,
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    "Retraits bientôt disponibles",
+                    style: TextStyle(
+                      color: textMain,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Cette section servira plus tard à demander un retrait ou une récompense selon les conditions de l’application.",
+                    style: TextStyle(
+                      color: textMuted,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: cardSoft,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.stars_rounded,
+                          color: cyan,
+                          size: 26,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Solde actuel : ${currentUser.points} points",
+                            style: const TextStyle(
+                              color: textMain,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: green.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: green.withOpacity(0.18)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: green,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Aucune promesse de gain n’est affichée ici. Le système sera ajouté proprement plus tard.",
+                            style: TextStyle(
+                              color: textMuted,
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profilePage() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _simpleHeader(
+            icon: Icons.person_rounded,
+            title: "Profil",
+            subtitle: "Compte, statut et progression",
+          ),
+          const SizedBox(height: 18),
+          _darkCard(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: blue.withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: blue.withOpacity(0.25)),
+                        ),
+                        child: const Icon(
+                          Icons.account_circle_rounded,
+                          color: cyan,
+                          size: 34,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentUser.email,
+                              style: const TextStyle(
+                                color: textMain,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              currentUser.isPremium
+                                  ? "Compte premium"
+                                  : "Compte standard",
+                              style: const TextStyle(
+                                color: textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      _miniStat(
+                        title: "Points",
+                        value: "${currentUser.points}",
+                        icon: Icons.stars_rounded,
+                        color: cyan,
+                      ),
+                      const SizedBox(width: 10),
+                      _miniStat(
+                        title: "Sessions",
+                        value: "$sessionsToday/$dailyLimit",
+                        icon: Icons.bolt_rounded,
+                        color: green,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: logout,
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A1114),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFF7F1D1D)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.logout_rounded,
+                            color: Color(0xFFFCA5A5),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            "Se déconnecter",
+                            style: TextStyle(
+                              color: Color(0xFFFCA5A5),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          _backendStatus(),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cardSoft,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: const TextStyle(
+                color: textMain,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: const TextStyle(
+                color: textMuted,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _simpleHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            gradient: const LinearGradient(
+              colors: [blue, cyan],
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 23,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: textMain,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -783,10 +1240,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _bottomNavigation() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: card,
+        border: Border(
+          top: BorderSide(color: border, width: 1),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: selectedIndex,
+        onTap: (index) {
+          setState(() {
+            selectedIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: card,
+        selectedItemColor: cyan,
+        unselectedItemColor: textMuted,
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
+        showUnselectedLabels: true,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: "Accueil",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history_rounded),
+            label: "Historique",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet_rounded),
+            label: "Retrait",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: "Profil",
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bg,
+      bottomNavigationBar: _bottomNavigation(),
       body: SafeArea(
         child: RefreshIndicator(
           color: cyan,
@@ -795,33 +1297,7 @@ class _HomeScreenState extends State<HomeScreen> {
             await refreshUser();
             await loadMiningHistory();
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _pageTitle(),
-                const SizedBox(height: 18),
-                _balanceCard(),
-                const SizedBox(height: 18),
-                if (refreshingUser)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 16),
-                    child: Center(
-                      child: CircularProgressIndicator(color: cyan),
-                    ),
-                  ),
-                _miningSection(),
-                const SizedBox(height: 18),
-                _historyCard(),
-                const SizedBox(height: 18),
-                _rewardsPreview(),
-                const SizedBox(height: 18),
-                _backendStatus(),
-              ],
-            ),
-          ),
+          child: _selectedPage(),
         ),
       ),
     );
