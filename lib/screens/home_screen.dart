@@ -286,8 +286,12 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return;
 
         setState(() {
-          _chestMessage = data['error']?.toString() ??
-              'Impossible de réclamer le coffre.';
+          final error = data['error']?.toString();
+final details = data['details']?.toString();
+
+_chestMessage = details != null && details.isNotEmpty
+    ? '$error : $details'
+    : error ?? 'Impossible de réclamer le coffre.';
 
           if (response.statusCode == 409) {
             _chestClaimed = true;
