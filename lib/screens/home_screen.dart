@@ -296,9 +296,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final progress = dailyLimit <= 0 ? 0.0 : (sessionsToday / dailyLimit).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -352,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 "${currentUser.points}",
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 52,
+                  fontSize: 44,
                   fontWeight: FontWeight.w900,
                   height: 1,
                 ),
@@ -509,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: startMiningCountdown,
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        height: 68,
+        height: 58,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           gradient: const LinearGradient(
@@ -545,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _historyCard() {
     return _darkCard(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -730,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       decoration: BoxDecoration(
         color: card,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
@@ -786,12 +786,12 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _pageTitle(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
                 _balanceCard(),
                 const SizedBox(height: 24),
                 if (refreshingUser)
