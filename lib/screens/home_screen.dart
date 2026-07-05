@@ -23,7 +23,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const String _baseUrl = 'https://hashledger-backend.vercel.app';
 
-  static const int _dailyChestTarget = 3;
   static const int _withdrawTarget = 10000;
 
   int _selectedIndex = 0;
@@ -31,6 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
   late int _points;
 
   bool _miningLoading = false;
+  bool _claimLoading = false;
+  bool _dailyStatusLoading = false;
+
   int _cooldownLeft = 0;
   Timer? _cooldownTimer;
 
@@ -38,17 +40,24 @@ class _HomeScreenState extends State<HomeScreen> {
   int _loginStreak = 1;
   bool _historySeenToday = false;
 
+  int _chestTarget = 3;
+  int _chestReward = 25;
+  bool _chestClaimed = false;
+  bool _canClaimChest = false;
+
   bool _historyLoading = false;
   String? _historyError;
   List<_HistoryEntry> _history = [];
 
   String? _message;
+  String? _chestMessage;
 
   @override
   void initState() {
     super.initState();
     _points = widget.user.points;
     _loadLocalProgress();
+    _loadDailyStatus(silent: true);
   }
 
   @override
@@ -137,12 +146,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _motivationText(_LevelData levelData) {
+    if (_chestClaimed) {
+      return 'Coffre du jour réclamé. Reviens demain pour garder ta série active.';
+    }
+
+    if (_canClaimChest) {
+      return 'Coffre débloqué. Réclame ton bonus de $_chestReward points.';
+    }
+
     if (_todayMines <= 0) {
       return 'Lance une première session pour activer tes missions du jour.';
     }
 
-    if (_todayMines < _dailyChestTarget) {
-      final remaining = _dailyChestTarget - _todayMines;
+    if (_todayMines < _chestTarget) {
+      final remaining = _chestTarget - _todayMines;
       return 'Encore $remaining session${remaining > 1 ? 's' : ''} pour débloquer le coffre du jour.';
     }
 
@@ -151,6 +168,148 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return 'Objectif du jour validé. Reviens demain pour garder ta série active.';
+  }
+
+  Future<void> _loadDailyStatus({bool silent = false}) async {
+    if (!silent && mounted) {
+      setState(() {
+        _dailyStatusLoading = true;
+        _chestMessage = null;
+      });
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/daily-status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.user.token}',
+        },
+      );
+
+      final dynamic decoded = response.body.isNotEmpty
+          ? jsonDecode(response.body)
+          : <String, dynamic>{};
+
+      final data = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final sessionsToday = _asInt(data['sessions_today']) ?? _todayMines;
+        final chestTarget = _asInt(data['chest_target']) ?? _chestTarget;
+        final chestReward = _asInt(data['chest_reward']) ?? _chestReward;
+        final chestClaimed = data['chest_claimed'] == true;
+        final canClaim = data['can_claim'] == true;
+        final points = _asInt(data['points']) ?? _points;
+
+        _todayMines = sessionsToday;
+        await _saveTodayMines();
+
+        if (!mounted) return;
+
+        setState(() {
+          _points = points;
+          _todayMines = sessionsToday;
+          _chestTarget = chestTarget;
+          _chestReward = chestReward;
+          _chestClaimed = chestClaimed;
+          _canClaimChest = canClaim;
+        });
+      } else {
+        if (!mounted || silent) return;
+
+        setState(() {
+          _chestMessage = data['error']?.toString() ??
+              'Impossible de charger le coffre.';
+        });
+      }
+    } catch (_) {
+      if (!mounted || silent) return;
+
+      setState(() {
+        _chestMessage = 'Erreur de connexion au coffre.';
+      });
+    } finally {
+      if (!mounted) return;
+
+      if (!silent) {
+        setState(() {
+          _dailyStatusLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _claimDailyChest() async {
+    if (_claimLoading || !_canClaimChest || _chestClaimed) return;
+
+    setState(() {
+      _claimLoading = true;
+      _chestMessage = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/claim-daily-chest'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.user.token}',
+        },
+      );
+
+      final dynamic decoded = response.body.isNotEmpty
+          ? jsonDecode(response.body)
+          : <String, dynamic>{};
+
+      final data = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final reward = _asInt(data['reward']) ?? _chestReward;
+        final newTotal = _asInt(data['new_total']) ?? (_points + reward);
+
+        if (!mounted) return;
+
+        setState(() {
+          _points = newTotal;
+          _chestClaimed = true;
+          _canClaimChest = false;
+          _chestMessage = '+$reward points ajoutés au coffre';
+          _message = '+$reward points coffre ajoutés';
+        });
+
+        await _loadDailyStatus(silent: true);
+        await _loadHistory();
+      } else {
+        if (!mounted) return;
+
+        setState(() {
+          _chestMessage = data['error']?.toString() ??
+              'Impossible de réclamer le coffre.';
+
+          if (response.statusCode == 409) {
+            _chestClaimed = true;
+            _canClaimChest = false;
+          }
+        });
+
+        await _loadDailyStatus(silent: true);
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _chestMessage = 'Erreur de connexion avec le serveur.';
+      });
+    } finally {
+      if (!mounted) return;
+
+      setState(() {
+        _claimLoading = false;
+      });
+    }
   }
 
   Future<void> _mine() async {
@@ -174,38 +333,45 @@ class _HomeScreenState extends State<HomeScreen> {
           ? jsonDecode(response.body)
           : <String, dynamic>{};
 
+      final data = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final reward = _asInt(decoded['reward']) ?? 0;
-        final newTotal = _asInt(decoded['new_total']) ??
-            _asInt(decoded['newTotal']) ??
-            _asInt(decoded['points']) ??
+        final reward = _asInt(data['reward']) ?? 0;
+        final newTotal = _asInt(data['new_total']) ??
+            _asInt(data['newTotal']) ??
+            _asInt(data['points']) ??
             (_points + reward);
 
-        final cooldown = _asInt(decoded['cooldown_seconds']) ??
-            _asInt(decoded['cooldownSeconds']) ??
+        final sessionsToday = _asInt(data['sessions_today']) ??
+            _asInt(data['daily_used']) ??
+            (_todayMines + 1);
+
+        final cooldown = _asInt(data['cooldown_seconds']) ??
+            _asInt(data['cooldownSeconds']) ??
             30;
 
-        _todayMines += 1;
+        _todayMines = sessionsToday;
         await _saveTodayMines();
 
         if (!mounted) return;
 
         setState(() {
           _points = newTotal;
+          _todayMines = sessionsToday;
+          _canClaimChest = _todayMines >= _chestTarget && !_chestClaimed;
           _message = reward > 0 ? '+$reward points ajoutés' : 'Session validée';
         });
 
         _startCooldown(cooldown);
+        await _loadDailyStatus(silent: true);
       } else {
-        final backendMessage = decoded is Map<String, dynamic>
-            ? decoded['message'] ?? decoded['error']
-            : null;
+        final backendMessage = data['message'] ?? data['error'];
 
-        final cooldown = decoded is Map<String, dynamic>
-            ? _asInt(decoded['cooldown_seconds']) ??
-                _asInt(decoded['cooldownSeconds']) ??
-                _asInt(decoded['remaining_seconds'])
-            : null;
+        final cooldown = _asInt(data['cooldown_seconds']) ??
+            _asInt(data['cooldownSeconds']) ??
+            _asInt(data['remaining_seconds']);
 
         if (cooldown != null && cooldown > 0) {
           _startCooldown(cooldown);
@@ -217,6 +383,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _message = backendMessage?.toString() ??
               'Impossible de miner pour le moment.';
         });
+
+        await _loadDailyStatus(silent: true);
       }
     } catch (_) {
       if (!mounted) return;
@@ -339,6 +507,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _markHistorySeen();
       _loadHistory();
     }
+
+    if (index == 0 || index == 2 || index == 3) {
+      _loadDailyStatus(silent: true);
+    }
   }
 
   @override
@@ -460,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMotivationBanner(_LevelData levelData) {
-    final chestReady = _todayMines >= _dailyChestTarget;
+    final chestReady = _canClaimChest || _chestClaimed;
 
     return Container(
       padding: const EdgeInsets.all(15),
@@ -686,9 +858,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDailyChest() {
-    final current = min(_todayMines, _dailyChestTarget);
-    final progress = (current / _dailyChestTarget).clamp(0.0, 1.0).toDouble();
-    final unlocked = _todayMines >= _dailyChestTarget;
+    final current = min(_todayMines, _chestTarget);
+    final progress = _chestTarget <= 0
+        ? 0.0
+        : (current / _chestTarget).clamp(0.0, 1.0).toDouble();
+
+    final unlocked = _todayMines >= _chestTarget;
+    final canClaim = _canClaimChest && !_chestClaimed;
+
+    String buttonText;
+
+    if (_claimLoading) {
+      buttonText = 'Réclamation...';
+    } else if (_chestClaimed) {
+      buttonText = 'Déjà réclamé aujourd’hui';
+    } else if (canClaim) {
+      buttonText = 'Réclamer +$_chestReward points';
+    } else {
+      final remaining = max(_chestTarget - current, 0);
+      buttonText =
+          '$remaining session${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}';
+    }
 
     return _SoftCard(
       child: Column(
@@ -696,13 +886,35 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _sectionTitle(
             title: 'Coffre quotidien',
-            subtitle: unlocked
-                ? 'Coffre débloqué. Le vrai bonus sera activé côté serveur plus tard.'
-                : 'Débloque le coffre après $_dailyChestTarget sessions aujourd’hui.',
+            subtitle: _chestClaimed
+                ? 'Bonus déjà réclamé aujourd’hui.'
+                : unlocked
+                    ? 'Coffre débloqué. Réclame ton bonus réel.'
+                    : 'Débloque le coffre après $_chestTarget sessions aujourd’hui.',
             icon: Icons.card_giftcard_rounded,
             color: const Color(0xFFFFC857),
           ),
           const SizedBox(height: 16),
+          if (_chestMessage != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                _chestMessage!,
+                style: TextStyle(
+                  color: _chestMessage!.startsWith('+')
+                      ? const Color(0xFF2DE2A6)
+                      : const Color(0xFFFFC857),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -724,9 +936,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Icon(
-                      unlocked
-                          ? Icons.lock_open_rounded
-                          : Icons.lock_clock_rounded,
+                      _chestClaimed
+                          ? Icons.check_circle_rounded
+                          : unlocked
+                              ? Icons.lock_open_rounded
+                              : Icons.lock_clock_rounded,
                       color: unlocked
                           ? const Color(0xFFFFC857)
                           : Colors.white.withOpacity(0.55),
@@ -735,9 +949,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        unlocked
-                            ? 'Coffre prêt à réclamer'
-                            : 'Progression du coffre',
+                        _chestClaimed
+                            ? 'Coffre réclamé'
+                            : unlocked
+                                ? 'Coffre prêt à réclamer'
+                                : 'Progression du coffre',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
@@ -746,7 +962,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Text(
-                      '$current/$_dailyChestTarget',
+                      '$current/$_chestTarget',
                       style: TextStyle(
                         color: unlocked
                             ? const Color(0xFFFFC857)
@@ -774,28 +990,39 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   height: 46,
                   child: ElevatedButton(
-                    onPressed: null,
+                    onPressed: canClaim && !_claimLoading
+                        ? _claimDailyChest
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      disabledBackgroundColor: unlocked
-                          ? const Color(0xFFFFC857).withOpacity(0.22)
+                      backgroundColor: const Color(0xFFFFC857),
+                      disabledBackgroundColor: _chestClaimed
+                          ? const Color(0xFF2DE2A6).withOpacity(0.18)
                           : Colors.white.withOpacity(0.07),
-                      disabledForegroundColor: unlocked
-                          ? const Color(0xFFFFC857)
+                      foregroundColor: const Color(0xFF181100),
+                      disabledForegroundColor: _chestClaimed
+                          ? const Color(0xFF2DE2A6)
                           : Colors.white.withOpacity(0.42),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: Text(
-                      unlocked
-                          ? 'Réclamer bientôt'
-                          : '${_dailyChestTarget - current} session${(_dailyChestTarget - current) > 1 ? 's' : ''} restante${(_dailyChestTarget - current) > 1 ? 's' : ''}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                      ),
-                    ),
+                    child: _claimLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.3,
+                              color: Color(0xFFFFC857),
+                            ),
+                          )
+                        : Text(
+                            buttonText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -813,7 +1040,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _sectionTitle(
             title: 'Missions du jour',
-            subtitle: 'Affichage visuel uniquement pour le moment',
+            subtitle: 'Synchronisées avec le serveur',
             icon: Icons.task_alt_rounded,
           ),
           const SizedBox(height: 14),
@@ -828,11 +1055,11 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           _MissionTile(
             icon: Icons.local_fire_department_rounded,
-            title: 'Faire 3 sessions',
-            subtitle: 'Objectif simple pour revenir plusieurs fois',
-            current: min(_todayMines, 3),
-            target: 3,
-            tag: '+ XP bientôt',
+            title: 'Faire $_chestTarget sessions',
+            subtitle: 'Débloque le coffre quotidien',
+            current: min(_todayMines, _chestTarget),
+            target: _chestTarget,
+            tag: '+$_chestReward pts',
           ),
           const SizedBox(height: 10),
           _MissionTile(
@@ -1085,17 +1312,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     children: [
                       _IconBubble(
-                        icon: Icons.bolt_rounded,
-                        color: const Color(0xFF2DE2A6),
+                        icon: entry.type == 'daily_chest'
+                            ? Icons.card_giftcard_rounded
+                            : Icons.bolt_rounded,
+                        color: entry.type == 'daily_chest'
+                            ? const Color(0xFFFFC857)
+                            : const Color(0xFF2DE2A6),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          entry.dateLabel,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 13,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.description.isNotEmpty
+                                  ? entry.description
+                                  : entry.dateLabel,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              entry.dateLabel,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.55),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       Text(
@@ -1261,7 +1508,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 _ProfileLine(
                   label: 'Objectif coffre',
-                  value: '${min(_todayMines, _dailyChestTarget)}/$_dailyChestTarget',
+                  value: '${min(_todayMines, _chestTarget)}/$_chestTarget',
+                ),
+                _ProfileLine(
+                  label: 'Coffre réclamé',
+                  value: _chestClaimed ? 'Oui' : 'Non',
                 ),
               ],
             ),
@@ -1680,10 +1931,14 @@ class _LevelData {
 class _HistoryEntry {
   final int reward;
   final String rawDate;
+  final String type;
+  final String description;
 
   const _HistoryEntry({
     required this.reward,
     required this.rawDate,
+    required this.type,
+    required this.description,
   });
 
   factory _HistoryEntry.fromJson(Map<String, dynamic> json) {
@@ -1702,6 +1957,8 @@ class _HistoryEntry {
               json['timestamp'] ??
               '')
           .toString(),
+      type: (json['type'] ?? 'mine').toString(),
+      description: (json['description'] ?? '').toString(),
     );
   }
 
