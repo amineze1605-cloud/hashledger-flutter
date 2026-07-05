@@ -23,6 +23,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const String _baseUrl = 'https://hashledger-backend.vercel.app';
 
+  static const int _dailyChestTarget = 3;
+  static const int _withdrawTarget = 10000;
+
   int _selectedIndex = 0;
 
   late int _points;
@@ -133,6 +136,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _motivationText(_LevelData levelData) {
+    if (_todayMines <= 0) {
+      return 'Lance une première session pour activer tes missions du jour.';
+    }
+
+    if (_todayMines < _dailyChestTarget) {
+      final remaining = _dailyChestTarget - _todayMines;
+      return 'Encore $remaining session${remaining > 1 ? 's' : ''} pour débloquer le coffre du jour.';
+    }
+
+    if (levelData.xpToNext <= 100) {
+      return 'Tu es proche du niveau ${levelData.level + 1}. Continue comme ça.';
+    }
+
+    return 'Objectif du jour validé. Reviens demain pour garder ta série active.';
+  }
+
   Future<void> _mine() async {
     if (_miningLoading || _cooldownLeft > 0) return;
 
@@ -172,9 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         setState(() {
           _points = newTotal;
-          _message = reward > 0
-              ? '+$reward points ajoutés'
-              : 'Session validée';
+          _message = reward > 0 ? '+$reward points ajoutés' : 'Session validée';
         });
 
         _startCooldown(cooldown);
@@ -360,11 +378,17 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildHeader(levelData),
           const SizedBox(height: 16),
+          _buildMotivationBanner(levelData),
+          const SizedBox(height: 16),
           _buildLevelCard(levelData),
           const SizedBox(height: 16),
           _buildMiningCard(),
           const SizedBox(height: 16),
+          _buildDailyChest(),
+          const SizedBox(height: 16),
           _buildDailyMissions(levelData),
+          const SizedBox(height: 16),
+          _buildWithdrawGoal(),
           const SizedBox(height: 16),
           _buildReturnObjectives(levelData),
         ],
@@ -432,6 +456,56 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMotivationBanner(_LevelData levelData) {
+    final chestReady = _todayMines >= _dailyChestTarget;
+
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: chestReady
+              ? [
+                  const Color(0xFF2DE2A6).withOpacity(0.18),
+                  const Color(0xFFFFC857).withOpacity(0.12),
+                ]
+              : [
+                  const Color(0xFF7C5CFF).withOpacity(0.18),
+                  const Color(0xFF2DE2A6).withOpacity(0.10),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: chestReady
+              ? const Color(0xFFFFC857).withOpacity(0.35)
+              : const Color(0xFF2DE2A6).withOpacity(0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            chestReady
+                ? Icons.card_giftcard_rounded
+                : Icons.auto_awesome_rounded,
+            color: chestReady ? const Color(0xFFFFC857) : const Color(0xFF2DE2A6),
+            size: 26,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _motivationText(levelData),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -611,6 +685,127 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildDailyChest() {
+    final current = min(_todayMines, _dailyChestTarget);
+    final progress = (current / _dailyChestTarget).clamp(0.0, 1.0).toDouble();
+    final unlocked = _todayMines >= _dailyChestTarget;
+
+    return _SoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(
+            title: 'Coffre quotidien',
+            subtitle: unlocked
+                ? 'Coffre débloqué. Le vrai bonus sera activé côté serveur plus tard.'
+                : 'Débloque le coffre après $_dailyChestTarget sessions aujourd’hui.',
+            icon: Icons.card_giftcard_rounded,
+            color: const Color(0xFFFFC857),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFFFC857).withOpacity(unlocked ? 0.22 : 0.10),
+                  const Color(0xFF2DE2A6).withOpacity(unlocked ? 0.14 : 0.06),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: unlocked
+                    ? const Color(0xFFFFC857).withOpacity(0.45)
+                    : Colors.white.withOpacity(0.08),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      unlocked
+                          ? Icons.lock_open_rounded
+                          : Icons.lock_clock_rounded,
+                      color: unlocked
+                          ? const Color(0xFFFFC857)
+                          : Colors.white.withOpacity(0.55),
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        unlocked
+                            ? 'Coffre prêt à réclamer'
+                            : 'Progression du coffre',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$current/$_dailyChestTarget',
+                      style: TextStyle(
+                        color: unlocked
+                            ? const Color(0xFFFFC857)
+                            : Colors.white.withOpacity(0.7),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 11,
+                    backgroundColor: Colors.white.withOpacity(0.09),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFFFFC857),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: null,
+                    style: ElevatedButton.styleFrom(
+                      disabledBackgroundColor: unlocked
+                          ? const Color(0xFFFFC857).withOpacity(0.22)
+                          : Colors.white.withOpacity(0.07),
+                      disabledForegroundColor: unlocked
+                          ? const Color(0xFFFFC857)
+                          : Colors.white.withOpacity(0.42),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      unlocked
+                          ? 'Réclamer bientôt'
+                          : '${_dailyChestTarget - current} session${(_dailyChestTarget - current) > 1 ? 's' : ''} restante${(_dailyChestTarget - current) > 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDailyMissions(_LevelData levelData) {
     return _SoftCard(
       child: Column(
@@ -656,6 +851,70 @@ class _HomeScreenState extends State<HomeScreen> {
             current: levelData.currentXp,
             target: levelData.neededXp,
             tag: 'progression',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWithdrawGoal() {
+    final progress = (_points / _withdrawTarget).clamp(0.0, 1.0).toDouble();
+    final remaining = max(_withdrawTarget - _points, 0);
+
+    return _SoftCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(
+            title: 'Objectif de retrait',
+            subtitle: 'Simulation pour donner un but clair à l’utilisateur',
+            icon: Icons.account_balance_wallet_rounded,
+            color: const Color(0xFF55D6FF),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text(
+                'Progression',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$_points / $_withdrawTarget',
+                style: const TextStyle(
+                  color: Color(0xFF55D6FF),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(50),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 12,
+              backgroundColor: Colors.white.withOpacity(0.08),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF55D6FF),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            remaining > 0
+                ? 'Encore $remaining points avant le premier objectif de retrait.'
+                : 'Objectif atteint. Le retrait réel sera activé plus tard côté serveur.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.58),
+              fontSize: 13,
+              height: 1.35,
+            ),
           ),
         ],
       ),
@@ -858,6 +1117,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWithdrawPage() {
+    final progress = (_points / _withdrawTarget).clamp(0.0, 1.0).toDouble();
+    final remaining = max(_withdrawTarget - _points, 0);
+
     return Container(
       color: const Color(0xFF05070C),
       child: ListView(
@@ -898,6 +1160,38 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    const Text(
+                      'Objectif retrait',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${(progress * 100).floor()}%',
+                      style: const TextStyle(
+                        color: Color(0xFF55D6FF),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 11,
+                    backgroundColor: Colors.white.withOpacity(0.08),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF55D6FF),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
@@ -907,7 +1201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    'Plus tard, on ajoutera le minimum de retrait, le wallet crypto et la validation côté serveur.',
+                    'Encore $remaining points avant l’objectif de retrait simulé. Plus tard, on ajoutera le wallet crypto et la validation côté serveur.',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.62),
                       height: 1.35,
@@ -964,6 +1258,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 _ProfileLine(
                   label: 'Minages aujourd’hui',
                   value: '$_todayMines',
+                ),
+                _ProfileLine(
+                  label: 'Objectif coffre',
+                  value: '${min(_todayMines, _dailyChestTarget)}/$_dailyChestTarget',
                 ),
               ],
             ),
@@ -1025,12 +1323,13 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required String subtitle,
     required IconData icon,
+    Color color = const Color(0xFF2DE2A6),
   }) {
     return Row(
       children: [
         _IconBubble(
           icon: icon,
-          color: const Color(0xFF2DE2A6),
+          color: color,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1150,7 +1449,9 @@ class _MissionTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.045),
+        color: completed
+            ? const Color(0xFF2DE2A6).withOpacity(0.07)
+            : Colors.white.withOpacity(0.045),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: completed
@@ -1194,9 +1495,11 @@ class _MissionTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Text(
-                        tag,
+                        completed ? 'terminé' : tag,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.62),
+                          color: completed
+                              ? const Color(0xFF2DE2A6)
+                              : Colors.white.withOpacity(0.62),
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                         ),
