@@ -22,11 +22,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const String _baseUrl = 'https://hashledger-backend.vercel.app';
-
   static const int _withdrawTarget = 10000;
 
   int _selectedIndex = 0;
-
   late int _points;
 
   bool _miningLoading = false;
@@ -285,13 +283,14 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         if (!mounted) return;
 
-        setState(() {
-          final error = data['error']?.toString();
-final details = data['details']?.toString();
+        final error = data['error']?.toString();
+        final details = data['details']?.toString();
+        final mainError = error ?? 'Erreur serveur';
 
-_chestMessage = details != null && details.isNotEmpty
-    ? '$error : $details'
-    : error ?? 'Impossible de réclamer le coffre.';
+        setState(() {
+          _chestMessage = details != null && details.isNotEmpty
+              ? '$mainError : $details'
+              : mainError;
 
           if (response.statusCode == 409) {
             _chestClaimed = true;
@@ -1370,19 +1369,45 @@ _chestMessage = details != null && details.isNotEmpty
   Widget _buildWithdrawPage() {
     final progress = (_points / _withdrawTarget).clamp(0.0, 1.0).toDouble();
     final remaining = max(_withdrawTarget - _points, 0);
+    final percent = (progress * 100).floor();
 
     return Container(
       color: const Color(0xFF05070C),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
         children: [
-          const Text(
-            'Retrait',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Retrait',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.7,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFC857).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: const Color(0xFFFFC857).withOpacity(0.35),
+                  ),
+                ),
+                child: const Text(
+                  'Bientôt',
+                  style: TextStyle(
+                    color: Color(0xFFFFC857),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _SoftCard(
@@ -1390,16 +1415,19 @@ _chestMessage = details != null && details.isNotEmpty
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _sectionTitle(
-                  title: 'Retraits bientôt disponibles',
-                  subtitle: 'Pour le moment, les points restent internes.',
+                  title: 'Objectif premier retrait',
+                  subtitle:
+                      'Les points sont internes pour le moment. Le retrait réel sera activé plus tard.',
                   icon: Icons.account_balance_wallet_rounded,
+                  color: const Color(0xFF55D6FF),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 Text(
-                  'Solde actuel',
+                  'Solde disponible',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.55),
                     fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1407,26 +1435,29 @@ _chestMessage = details != null && details.isNotEmpty
                   '$_points points',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 30,
+                    fontSize: 34,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.8,
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     const Text(
-                      'Objectif retrait',
+                      'Progression retrait',
                       style: TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      '${(progress * 100).floor()}%',
+                      '$percent%',
                       style: const TextStyle(
                         color: Color(0xFF55D6FF),
                         fontWeight: FontWeight.w900,
+                        fontSize: 15,
                       ),
                     ),
                   ],
@@ -1436,26 +1467,232 @@ _chestMessage = details != null && details.isNotEmpty
                   borderRadius: BorderRadius.circular(50),
                   child: LinearProgressIndicator(
                     value: progress,
-                    minHeight: 11,
+                    minHeight: 13,
                     backgroundColor: Colors.white.withOpacity(0.08),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       Color(0xFF55D6FF),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      '$_points pts',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.55),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$_withdrawTarget pts',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.55),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Container(
                   width: double.infinity,
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF55D6FF).withOpacity(0.10),
+                        const Color(0xFF2DE2A6).withOpacity(0.06),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: const Color(0xFF55D6FF).withOpacity(0.22),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.lock_clock_rounded,
+                        color: Color(0xFF55D6FF),
+                        size: 26,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          remaining > 0
+                              ? 'Encore $remaining points avant de débloquer la demande de retrait.'
+                              : 'Objectif atteint. La demande de retrait sera activée côté serveur plus tard.',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionTitle(
+                  title: 'Méthode de retrait prévue',
+                  subtitle: 'Affichage premium pour préparer la future version.',
+                  icon: Icons.paid_rounded,
+                  color: const Color(0xFFFFC857),
+                ),
+                const SizedBox(height: 16),
+                Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.045),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.07),
+                    ),
                   ),
-                  child: Text(
-                    'Encore $remaining points avant l’objectif de retrait simulé. Plus tard, on ajoutera le wallet crypto et la validation côté serveur.',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.62),
-                      height: 1.35,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: Color(0xFFFFC857),
+                            size: 22,
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Retrait crypto',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.07),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              'à venir',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.6),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Plus tard, l’utilisateur pourra ajouter une adresse wallet, demander un retrait, puis attendre la validation serveur.',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.58),
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _WithdrawMiniBox(
+                        icon: Icons.verified_user_rounded,
+                        title: 'Validation',
+                        value: 'Anti-fraude',
+                        color: const Color(0xFF2DE2A6),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _WithdrawMiniBox(
+                        icon: Icons.schedule_rounded,
+                        title: 'Délai estimé',
+                        value: '24-72h',
+                        color: const Color(0xFF55D6FF),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionTitle(
+                  title: 'Conditions prévues',
+                  subtitle: 'Ces règles seront connectées au backend plus tard.',
+                  icon: Icons.rule_rounded,
+                  color: const Color(0xFF2DE2A6),
+                ),
+                const SizedBox(height: 14),
+                _WithdrawRuleLine(
+                  icon: Icons.flag_rounded,
+                  title: 'Minimum de retrait',
+                  value: '10 000 points',
+                  active: _points >= _withdrawTarget,
+                ),
+                _WithdrawRuleLine(
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Adresse wallet',
+                  value: 'à ajouter',
+                  active: false,
+                ),
+                _WithdrawRuleLine(
+                  icon: Icons.security_rounded,
+                  title: 'Contrôle anti-abus',
+                  value: 'obligatoire',
+                  active: false,
+                ),
+                _WithdrawRuleLine(
+                  icon: Icons.history_rounded,
+                  title: 'Historique suffisant',
+                  value: 'sessions valides',
+                  active: _todayMines >= _chestTarget,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: null,
+                    style: ElevatedButton.styleFrom(
+                      disabledBackgroundColor: Colors.white.withOpacity(0.07),
+                      disabledForegroundColor: Colors.white.withOpacity(0.38),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: const Text(
+                      'Demande de retrait bientôt disponible',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -1494,14 +1731,8 @@ _chestMessage = details != null && details.isNotEmpty
                   icon: Icons.person_rounded,
                 ),
                 const SizedBox(height: 18),
-                _ProfileLine(
-                  label: 'Points',
-                  value: '$_points',
-                ),
-                _ProfileLine(
-                  label: 'Niveau',
-                  value: '${levelData.level}',
-                ),
+                _ProfileLine(label: 'Points', value: '$_points'),
+                _ProfileLine(label: 'Niveau', value: '${levelData.level}'),
                 _ProfileLine(
                   label: 'Série de connexion',
                   value: '$_loginStreak jour${_loginStreak > 1 ? 's' : ''}',
@@ -1582,10 +1813,7 @@ _chestMessage = details != null && details.isNotEmpty
   }) {
     return Row(
       children: [
-        _IconBubble(
-          icon: icon,
-          color: color,
-        ),
+        _IconBubble(icon: icon, color: color),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1619,9 +1847,7 @@ _chestMessage = details != null && details.isNotEmpty
 class _SoftCard extends StatelessWidget {
   final Widget child;
 
-  const _SoftCard({
-    required this.child,
-  });
+  const _SoftCard({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -1630,9 +1856,7 @@ class _SoftCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF111827).withOpacity(0.92),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.28),
@@ -1663,15 +1887,9 @@ class _IconBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: color.withOpacity(0.28),
-        ),
+        border: Border.all(color: color.withOpacity(0.28)),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 22,
-      ),
+      child: Icon(icon, color: color, size: 22),
     );
   }
 }
@@ -1728,41 +1946,26 @@ class _MissionTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.07),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Text(
-                        completed ? 'terminé' : tag,
-                        style: TextStyle(
-                          color: completed
-                              ? const Color(0xFF2DE2A6)
-                              : Colors.white.withOpacity(0.62),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 4),
+                Text(
+                  completed ? 'terminé' : tag,
+                  style: TextStyle(
+                    color: completed
+                        ? const Color(0xFF2DE2A6)
+                        : Colors.white.withOpacity(0.52),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -1824,18 +2027,12 @@ class _ObjectiveBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.045),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.07),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: const Color(0xFF2DE2A6),
-            size: 22,
-          ),
+          Icon(icon, color: const Color(0xFF2DE2A6), size: 22),
           const SizedBox(height: 12),
           Text(
             title,
@@ -1868,6 +2065,114 @@ class _ObjectiveBox extends StatelessWidget {
   }
 }
 
+class _WithdrawMiniBox extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color color;
+
+  const _WithdrawMiniBox({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.55),
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WithdrawRuleLine extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final bool active;
+
+  const _WithdrawRuleLine({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.active,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(0.06)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            active ? Icons.check_circle_rounded : icon,
+            color: active
+                ? const Color(0xFF2DE2A6)
+                : Colors.white.withOpacity(0.45),
+            size: 21,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.62),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: active
+                  ? const Color(0xFF2DE2A6)
+                  : Colors.white.withOpacity(0.82),
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProfileLine extends StatelessWidget {
   final String label;
   final String value;
@@ -1883,9 +2188,7 @@ class _ProfileLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 11),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withOpacity(0.06),
-          ),
+          bottom: BorderSide(color: Colors.white.withOpacity(0.06)),
         ),
       ),
       child: Row(
