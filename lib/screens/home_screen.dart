@@ -1367,342 +1367,404 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWithdrawPage() {
-    final progress = (_points / _withdrawTarget).clamp(0.0, 1.0).toDouble();
-    final remaining = max(_withdrawTarget - _points, 0);
-    final percent = (progress * 100).floor();
+  final progress = (_points / _withdrawTarget).clamp(0.0, 1.0).toDouble();
+  final remaining = max(_withdrawTarget - _points, 0);
+  final percent = (progress * 100).floor();
+  final canRequestWithdraw = _points >= _withdrawTarget;
 
-    return Container(
-      color: const Color(0xFF05070C),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
-        children: [
-          Row(
+  return Container(
+    color: const Color(0xFF05070C),
+    child: ListView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Retrait',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.7,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFC857).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: const Color(0xFFFFC857).withOpacity(0.35),
+                ),
+              ),
+              child: const Text(
+                'Bientôt',
+                style: TextStyle(
+                  color: Color(0xFFFFC857),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        _SoftCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
-                child: Text(
-                  'Retrait',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.7,
+              _sectionTitle(
+                title: 'Objectif premier retrait',
+                subtitle:
+                    'Les points sont internes pour le moment. Le retrait réel sera activé plus tard.',
+                icon: Icons.account_balance_wallet_rounded,
+                color: const Color(0xFF55D6FF),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Solde disponible',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.55),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$_points points',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Text(
+                    'Progression retrait',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$percent%',
+                    style: const TextStyle(
+                      color: Color(0xFF55D6FF),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 13,
+                  backgroundColor: Colors.white.withOpacity(0.08),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF55D6FF),
                   ),
                 ),
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(
+                    '$_points pts',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.55),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$_withdrawTarget pts',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.55),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                width: double.infinity,
+                padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFC857).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(30),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF55D6FF).withOpacity(0.10),
+                      const Color(0xFF2DE2A6).withOpacity(0.06),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: const Color(0xFFFFC857).withOpacity(0.35),
+                    color: const Color(0xFF55D6FF).withOpacity(0.22),
                   ),
                 ),
-                child: const Text(
-                  'Bientôt',
-                  style: TextStyle(
-                    color: Color(0xFFFFC857),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.lock_clock_rounded,
+                      color: Color(0xFF55D6FF),
+                      size: 26,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        remaining > 0
+                            ? 'Encore $remaining points avant de débloquer la demande de retrait.'
+                            : 'Objectif atteint. La demande de retrait pourra être envoyée plus tard.',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        _SoftCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle(
+                title: 'Demande de retrait',
+                subtitle:
+                    'Formulaire visuel uniquement. Rien n’est encore envoyé au serveur.',
+                icon: Icons.send_rounded,
+                color: const Color(0xFF2DE2A6),
+              ),
+              const SizedBox(height: 18),
+
+              Text(
+                'Adresse wallet',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.62),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                enabled: false,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Exemple : adresse USDT / BTC / wallet crypto',
+                  hintStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.35),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.055),
+                  prefixIcon: Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white.withOpacity(0.42),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Text(
+                'Réseau',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.62),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.055),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.hub_rounded,
+                      color: Colors.white.withOpacity(0.42),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Choisir un réseau plus tard',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.42),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white.withOpacity(0.35),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Text(
+                'Montant demandé',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.62),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                enabled: false,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Minimum $_withdrawTarget points',
+                  hintStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.35),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.055),
+                  prefixIcon: Icon(
+                    Icons.toll_rounded,
+                    color: Colors.white.withOpacity(0.42),
+                  ),
+                  suffixText: 'points',
+                  suffixStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.42),
+                    fontWeight: FontWeight.w700,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: null,
+                  style: ElevatedButton.styleFrom(
+                    disabledBackgroundColor: canRequestWithdraw
+                        ? const Color(0xFF2DE2A6).withOpacity(0.18)
+                        : Colors.white.withOpacity(0.07),
+                    disabledForegroundColor: canRequestWithdraw
+                        ? const Color(0xFF2DE2A6)
+                        : Colors.white.withOpacity(0.38),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: Text(
+                    canRequestWithdraw
+                        ? 'Formulaire bientôt activé'
+                        : 'Solde insuffisant pour demander un retrait',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _SoftCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle(
-                  title: 'Objectif premier retrait',
-                  subtitle:
-                      'Les points sont internes pour le moment. Le retrait réel sera activé plus tard.',
-                  icon: Icons.account_balance_wallet_rounded,
-                  color: const Color(0xFF55D6FF),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Solde disponible',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.55),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '$_points points',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.8,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    const Text(
-                      'Progression retrait',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$percent%',
-                      style: const TextStyle(
-                        color: Color(0xFF55D6FF),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 13,
-                    backgroundColor: Colors.white.withOpacity(0.08),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Color(0xFF55D6FF),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Text(
-                      '$_points pts',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.55),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$_withdrawTarget pts',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.55),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF55D6FF).withOpacity(0.10),
-                        const Color(0xFF2DE2A6).withOpacity(0.06),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF55D6FF).withOpacity(0.22),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.lock_clock_rounded,
-                        color: Color(0xFF55D6FF),
-                        size: 26,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          remaining > 0
-                              ? 'Encore $remaining points avant de débloquer la demande de retrait.'
-                              : 'Objectif atteint. La demande de retrait sera activée côté serveur plus tard.',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+        ),
+
+        const SizedBox(height: 16),
+
+        _SoftCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle(
+                title: 'Conditions prévues',
+                subtitle: 'Ces règles seront connectées au backend plus tard.',
+                icon: Icons.rule_rounded,
+                color: const Color(0xFF2DE2A6),
+              ),
+              const SizedBox(height: 14),
+              _WithdrawRuleLine(
+                icon: Icons.flag_rounded,
+                title: 'Minimum de retrait',
+                value: '10 000 points',
+                active: _points >= _withdrawTarget,
+              ),
+              _WithdrawRuleLine(
+                icon: Icons.account_balance_wallet_rounded,
+                title: 'Adresse wallet',
+                value: 'à ajouter',
+                active: false,
+              ),
+              _WithdrawRuleLine(
+                icon: Icons.security_rounded,
+                title: 'Contrôle anti-abus',
+                value: 'obligatoire',
+                active: false,
+              ),
+              _WithdrawRuleLine(
+                icon: Icons.history_rounded,
+                title: 'Historique suffisant',
+                value: 'sessions valides',
+                active: _todayMines >= _chestTarget,
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          _SoftCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle(
-                  title: 'Méthode de retrait prévue',
-                  subtitle: 'Affichage premium pour préparer la future version.',
-                  icon: Icons.paid_rounded,
-                  color: const Color(0xFFFFC857),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.045),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.07),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.account_balance_wallet_rounded,
-                            color: Color(0xFFFFC857),
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text(
-                              'Retrait crypto',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.07),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Text(
-                              'à venir',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.6),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Plus tard, l’utilisateur pourra ajouter une adresse wallet, demander un retrait, puis attendre la validation serveur.',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.58),
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _WithdrawMiniBox(
-                        icon: Icons.verified_user_rounded,
-                        title: 'Validation',
-                        value: 'Anti-fraude',
-                        color: const Color(0xFF2DE2A6),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _WithdrawMiniBox(
-                        icon: Icons.schedule_rounded,
-                        title: 'Délai estimé',
-                        value: '24-72h',
-                        color: const Color(0xFF55D6FF),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _SoftCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionTitle(
-                  title: 'Conditions prévues',
-                  subtitle: 'Ces règles seront connectées au backend plus tard.',
-                  icon: Icons.rule_rounded,
-                  color: const Color(0xFF2DE2A6),
-                ),
-                const SizedBox(height: 14),
-                _WithdrawRuleLine(
-                  icon: Icons.flag_rounded,
-                  title: 'Minimum de retrait',
-                  value: '10 000 points',
-                  active: _points >= _withdrawTarget,
-                ),
-                _WithdrawRuleLine(
-                  icon: Icons.account_balance_wallet_rounded,
-                  title: 'Adresse wallet',
-                  value: 'à ajouter',
-                  active: false,
-                ),
-                _WithdrawRuleLine(
-                  icon: Icons.security_rounded,
-                  title: 'Contrôle anti-abus',
-                  value: 'obligatoire',
-                  active: false,
-                ),
-                _WithdrawRuleLine(
-                  icon: Icons.history_rounded,
-                  title: 'Historique suffisant',
-                  value: 'sessions valides',
-                  active: _todayMines >= _chestTarget,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: null,
-                    style: ElevatedButton.styleFrom(
-                      disabledBackgroundColor: Colors.white.withOpacity(0.07),
-                      disabledForegroundColor: Colors.white.withOpacity(0.38),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: const Text(
-                      'Demande de retrait bientôt disponible',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildProfilePage() {
     final levelData = _calculateLevel(_points);
