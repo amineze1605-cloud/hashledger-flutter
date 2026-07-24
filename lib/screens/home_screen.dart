@@ -590,8 +590,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openDailyWheel() async {
     await showDialog<void>(
       context: context,
-      barrierDismissible: !_wheelLoading,
-      builder: (dialogContext) {
+      barrierDismissible: false, 
+      builder: (_) {
         return _DailyWheelDialog(
           rewards: _wheelRewards,
           available: _wheelAvailable,
